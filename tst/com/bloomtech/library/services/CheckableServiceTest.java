@@ -7,6 +7,7 @@ import com.bloomtech.library.models.checkableTypes.*;
 import com.bloomtech.library.repositories.CheckableRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,12 +20,17 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
 public class CheckableServiceTest {
 
     //TODO: Inject dependencies and mocks
+    @Autowired
+    private CheckableService checkableService;
+
+    @MockBean
+    private CheckableRepository checkableRepository;
 
     private List<Checkable> checkables;
 
@@ -48,4 +54,59 @@ public class CheckableServiceTest {
     }
 
     //TODO: Write Unit Tests for all CheckableService methods and possible Exceptions
+    @Test
+    void getAll() {
+        when(checkableRepository.findAll()).thenReturn(checkables);
+        List<Checkable> testCheckables = checkableService.getAll();
+        assertEquals(checkables, testCheckables);
+    }
+    @Test
+    void getByIsbn_checkableNotPresent() {
+        String unknownIsbn = "unknown-isbn";
+        when(checkableRepository.findByIsbn(unknownIsbn)).thenReturn(Optional.empty());
+
+        assertThrows(CheckableNotFoundException.class, () -> {
+            checkableService.getByIsbn(unknownIsbn);
+        }, "No Checkable found with isbn: " + unknownIsbn);
+    }
+    @Test
+    void getByIsbn() {
+        Checkable expected = checkables.get(1);
+        when(checkableRepository.findByIsbn("1-1")).thenReturn(Optional.ofNullable(checkables.get(1)));
+
+        Checkable actual = checkableService.getByIsbn("1-1");
+        assertEquals(expected, actual);
+    }
+    @Test
+    void getByType_checkableNotPresent() {
+        Class<Media> mediaClass = Media.class;
+        when(checkableRepository.findByType(mediaClass)).thenReturn(Optional.empty());
+
+        assertThrows(CheckableNotFoundException.class, () -> {
+            checkableService.getByType(mediaClass);
+        }, "No Checkable found of type: " + Media.class);
+    }
+    @Test
+    void getByType() {
+        Checkable expected = checkables.get(0);
+        when(checkableRepository.findByType(Media.class)).thenReturn(Optional.ofNullable(checkables.get(0)));
+
+        Checkable actual = checkableService.getByType(Media.class);
+        assertEquals(expected, actual);
+    }
+    @Test
+    void save() {
+        Checkable testCheckable = checkables.get(0);
+        checkableRepository.save(testCheckable);
+
+        verify(checkableRepository).save(testCheckable);
+    }
+    @Test
+    void save_checkableIsAlreadyPresent() {
+        Checkable testCheckable = checkables.get(0);
+        when(checkableRepository.findAll()).thenReturn(checkables);
+        assertThrows(ResourceExistsException.class, () -> {
+            checkableService.save(testCheckable);
+        }, "Checkable with isbn: " + testCheckable.getIsbn() + " already exists!");
+    }
 }

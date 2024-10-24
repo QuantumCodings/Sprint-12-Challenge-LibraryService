@@ -26,12 +26,16 @@ public class LibraryService {
     @Autowired
     private LibraryRepository libraryRepository;
 
+    @Autowired
+    private CheckableService checkableService;
+
     public List<Library> getLibraries() {
-        return new ArrayList<>();
+        return libraryRepository.findAll();
     }
 
     public Library getLibraryByName(String name) {
-        return null;
+
+        return libraryRepository.findByName(name).orElseThrow(() -> new LibraryNotFoundException("Non-Existent Library"));
     }
 
     public void save(Library library) {
@@ -43,18 +47,48 @@ public class LibraryService {
     }
 
     public CheckableAmount getCheckableAmount(String libraryName, String checkableIsbn) {
-        return new CheckableAmount(null, 0);
-    }
+        Checkable checkable = checkableService.getByIsbn(checkableIsbn);
+        Library library = getLibraryByName(libraryName);
+        for (CheckableAmount amount : library.getCheckables()) {
+            if (amount.getCheckable() == checkable) {
+                return amount;
+            }
+        }
 
+        return new CheckableAmount(checkable, 0);
+    }
+    public List<OverdueCheckout> getOverdueCheckouts(String libraryName) {
+        List<OverdueCheckout> overdueCheckouts = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        Library library = getLibraryByName(libraryName);
+        for (LibraryCard libraryCard : library.getLibraryCards()) {
+            for (Checkout checkout : libraryCard.getCheckouts()) {
+                if (checkout.getDueDate().isBefore(now)) {
+                    overdueCheckouts.add(new OverdueCheckout(libraryCard.getPatron(), checkout));
+                }
+            }
+        }
+
+        return overdueCheckouts;
+    }
     public List<LibraryAvailableCheckouts> getLibrariesWithAvailableCheckout(String isbn) {
+        Checkable checkable = checkableService.getByIsbn(isbn);
+        List<Library> libraries = getLibraries();
+
         List<LibraryAvailableCheckouts> available = new ArrayList<>();
+        librariesLoop:
+        for (Library library : libraries) {
+            for (CheckableAmount amount : library.getCheckables()) {
+                if (amount.getCheckable() == checkable) {
+                    available.add(new LibraryAvailableCheckouts(amount.getAmount(), library.getName()));
+                    continue librariesLoop;
+                }
+            }
+        }
 
         return available;
     }
 
-    public List<OverdueCheckout> getOverdueCheckouts(String libraryName) {
-        List<OverdueCheckout> overdueCheckouts = new ArrayList<>();
 
-        return overdueCheckouts;
-    }
 }
