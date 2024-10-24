@@ -29,14 +29,7 @@ public class LibraryService {
     @Autowired
     private CheckableService checkableService;
 
-    public List<Library> getLibraries() {
-        return libraryRepository.findAll();
-    }
 
-    public Library getLibraryByName(String name) {
-
-        return libraryRepository.findByName(name).orElseThrow(() -> new LibraryNotFoundException("Non-Existent Library"));
-    }
 
     public void save(Library library) {
         List<Library> libraries = libraryRepository.findAll();
@@ -45,7 +38,14 @@ public class LibraryService {
         }
         libraryRepository.save(library);
     }
+    public List<Library> getLibraries() {
+        return libraryRepository.findAll();
+    }
 
+    public Library getLibraryByName(String name) {
+
+        return libraryRepository.findByName(name).orElseThrow(() -> new LibraryNotFoundException("Non-Existent Library"));
+    }
     public CheckableAmount getCheckableAmount(String libraryName, String checkableIsbn) {
         Checkable checkable = checkableService.getByIsbn(checkableIsbn);
         Library library = getLibraryByName(libraryName);
